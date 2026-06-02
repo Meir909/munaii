@@ -1,0 +1,207 @@
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { Sparkles, Send, Bot, User, AlertTriangle, TrendingDown, Activity, Loader2, Ban } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { aiApi } from "@/lib/api";
+import { toast } from "sonner";
+import { useSession } from "@/lib/session";
+import { useFeatureHelp } from "@/hooks/use-feature-help";
+import { FeatureHelpDialog, FeatureHelpButton } from "@/components/feature-help-dialog";
+import { pollIntervalMs } from "@/lib/query-client";
+import { useNetworkStatus } from "@/lib/network-status";
+
+export default function AIPage() {
+  const { role } = useSession();
+  const { slow } = useNetworkStatus();
+  const queryClient = useQueryClient();
+  const aiHelp = useFeatureHelp("ai.assistant", role);
+  const [messages, setMessages] = useState<{ role: "user" | "ai"; text: string }[]>([
+    { role: "ai", text: "Здравствуйте! Я — AI-ассистент MUNAI. Спросите меня про скважины, отчёты или производство." },
+  ]);
+  const [input, setInput] = useState("");
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const { data: usage } = useQuery({
+    queryKey: ["ai-usage"],
+    queryFn: aiApi.usage,
+    refetchInterval: pollIntervalMs(60_000, slow),
+  });
+
+  const aiBlocked = usage?.blocked ?? false;
+
+  const { data: insights } = useQuery({
+    queryKey: ["ai-insights"],
+    queryFn: aiApi.insights,
+    refetchInterval: pollIntervalMs(120_000, slow),
+  });
+
+  const chatMutation = useMutation({
+    mutationFn: (msg: string) => aiApi.chat(msg),
+    onSuccess: (data) => {
+      setMessages((m) => [...m, { role: "ai", text: data.reply }]);
+      if (data.usage) {
+        queryClient.setQueryData(["ai-usage"], data.usage);
+      }
+      if (data.ai_blocked) {
+        toast.warning("Лимит OpenAI исчерпан — AI заблокирован");
+      }
+    },
+    onError: (e: Error) => {
+      toast.error(e.message);
+      setMessages((m) => [...m, { role: "ai", text: "Произошла ошибка. Попробуйте снова." }]);
+    },
+  });
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const send = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || chatMutation.isPending || aiBlocked) return;
+    const text = input.trim();
+    setMessages((m) => [...m, { role: "user", text }]);
+    setInput("");
+    chatMutation.mutate(text);
+  };
+
+  const insightData = insights?.insights as Array<{ tone: string; title: string; desc: string }> ?? [
+    { tone: "warning", title: "3 аномалии", desc: "Обнаружены за последние 24 часа" },
+    { tone: "destructive", title: "UZ-117 — риск останова", desc: "Падение давления −18% за неделю" },
+    { tone: "info", title: "Эффективность +8%", desc: "По сравнению с прошлой неделей" },
+  ];
+
+  const suggestions = insights?.suggestions as string[] ?? [];
+
+  return (
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-5">
+      <FeatureHelpDialog
+        featureId="ai.assistant"
+        role={role}
+        open={aiHelp.open}
+        onOpenChange={aiHelp.setOpen}
+      />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold flex items-center gap-2">
+            <Sparkles className="h-8 w-8 text-primary" /> AI-аналитика
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Интеллектуальный анализ производства и рисков</p>
+        </div>
+        <FeatureHelpButton featureId="ai.assistant" role={role} />
+      </div>
+
+      {usage && (
+        <div className={`rounded-2xl border p-4 space-y-3 ${aiBlocked ? "border-destructive/50 bg-destructive/5" : "border-border bg-card"}`}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="font-semibold text-sm flex items-center gap-2">
+              {aiBlocked ? <Ban className="h-4 w-4 text-destructive" /> : <Sparkles className="h-4 w-4 text-primary" />}
+              Бюджет OpenAI: ${usage.total_cost_usd.toFixed(4)} / ${usage.budget_usd.toFixed(2)}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Токены: {usage.total_tokens.toLocaleString()} / {usage.max_tokens.toLocaleString()}
+            </div>
+          </div>
+          <Progress value={Math.max(usage.usage_percent_budget, usage.usage_percent_tokens)} className="h-2" />
+          {aiBlocked && (
+            <p className="text-sm text-destructive">{usage.block_reason ?? "AI заблокирован — лимит $2 или 100 000 токенов исчерпан."}</p>
+          )}
+        </div>
+      )}
+
+      <div className="grid md:grid-cols-3 gap-4">
+        {insightData.map((ins, i) => (
+          <InsightCard
+            key={i}
+            icon={i === 0 ? AlertTriangle : i === 1 ? TrendingDown : Activity}
+            tone={ins.tone as "warning" | "destructive" | "info"}
+            title={ins.title}
+            desc={ins.desc}
+          />
+        ))}
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 rounded-2xl border border-border bg-card flex flex-col h-[520px]">
+          <div className="p-4 border-b border-border flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-primary grid place-items-center"><Bot className="h-4 w-4 text-primary-foreground" /></div>
+            <div>
+              <div className="font-semibold text-sm">AI-ассистент MUNAI</div>
+              <div className="text-xs text-muted-foreground">
+                {aiBlocked ? "Заблокирован · лимит OpenAI" : chatMutation.isPending ? "Думаю…" : "Онлайн · экономный режим"}
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {messages.map((m, i) => (
+              <div key={i} className={`flex gap-2 ${m.role === "user" ? "justify-end" : ""}`}>
+                {m.role === "ai" && <div className="h-7 w-7 rounded-full bg-accent grid place-items-center shrink-0"><Bot className="h-4 w-4 text-primary" /></div>}
+                <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                  {m.text}
+                </div>
+                {m.role === "user" && <div className="h-7 w-7 rounded-full bg-primary grid place-items-center shrink-0"><User className="h-4 w-4 text-primary-foreground" /></div>}
+              </div>
+            ))}
+            {chatMutation.isPending && (
+              <div className="flex gap-2">
+                <div className="h-7 w-7 rounded-full bg-accent grid place-items-center shrink-0"><Bot className="h-4 w-4 text-primary" /></div>
+                <div className="bg-muted rounded-2xl px-4 py-2.5 flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Анализирую данные…</span>
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+          <form onSubmit={send} className="p-3 border-t border-border flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={aiBlocked ? "AI заблокирован — лимит OpenAI исчерпан" : "Спросите AI…"}
+              className="h-11"
+              disabled={chatMutation.isPending || aiBlocked}
+            />
+            <Button type="submit" className="h-11" disabled={chatMutation.isPending || !input.trim() || aiBlocked}>
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+          <h3 className="font-semibold">Рекомендации AI</h3>
+          {(suggestions.length > 0 ? suggestions : [
+            "Перепроверить замер на UZ-104 — температура аномальная",
+            "Запланировать ТО для UZ-117 в течение недели",
+            "Обновить параметры насоса на UZ-122",
+            "Обучить оператора новой форме отчёта",
+          ]).map((rec, i) => (
+            <button
+              key={i}
+              className="w-full text-left rounded-xl border border-border p-3 text-sm hover:border-primary hover:bg-accent transition disabled:opacity-50"
+              disabled={aiBlocked}
+              onClick={() => { setInput(rec); }}
+            >
+              <div className="flex items-start gap-2">
+                <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                {rec}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InsightCard({ icon: Icon, tone, title, desc }: { icon: React.ElementType; tone: "warning" | "destructive" | "info"; title: string; desc: string }) {
+  const cls = tone === "warning" ? "bg-warning/15 text-warning-foreground" : tone === "destructive" ? "bg-destructive/10 text-destructive" : "bg-info/10 text-info";
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className={`h-10 w-10 rounded-xl grid place-items-center ${cls}`}><Icon className="h-5 w-5" /></div>
+      <div className="mt-3 font-semibold">{title}</div>
+      <div className="text-xs text-muted-foreground mt-0.5">{desc}</div>
+    </div>
+  );
+}

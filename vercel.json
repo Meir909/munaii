@@ -1,0 +1,49 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": { "maxDuration": 30 }
+    },
+    {
+      "src": "munai-digital-oilfield-ops-main/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist",
+        "buildCommand": "npm install && VITE_API_URL=/api npm run build:spa"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/munai-digital-oilfield-ops-main/assets/$1"
+    },
+    {
+      "src": "/",
+      "dest": "/munai-digital-oilfield-ops-main/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/munai-digital-oilfield-ops-main/index.html"
+    }
+  ],
+  "env": {
+    "DATABASE_URL": "sqlite:////tmp/munai.db",
+    "SECRET_KEY": "munai-production-secret-key-2026-change-me",
+    "ALGORITHM": "HS256",
+    "ACCESS_TOKEN_EXPIRE_MINUTES": "10080",
+    "OPENAI_MODEL": "gpt-4o-mini",
+    "OPENAI_BUDGET_USD": "2",
+    "OPENAI_MAX_TOKENS": "100000",
+    "AI_USAGE_FILE": "/tmp/munai_ai_usage.json"
+  }
+}
