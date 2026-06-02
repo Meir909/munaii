@@ -27,7 +27,7 @@ VITE_API_URL=/api
 | `OPENAI_API_KEY` | GPT + Whisper (отчёты, голос) |
 | `OPENAI_MODEL` | `gpt-4o-mini` (по умолчанию) |
 | `OPENAI_BUDGET_USD` | Лимит расходов OpenAI, по умолчанию **$2** — после этого AI блокируется |
-| `OPENAI_MAX_TOKENS` | Лимит токенов, по умолчанию **100000** |
+| `OPENAI_MAX_TOKENS` | Учёт токенов (статистика), блокировка только по `$` |
 | `AI_USAGE_FILE` | Файл учёта расхода (на Vercel: `/tmp/munai_ai_usage.json`) |
 | `SUPABASE_JWT_SECRET` | JWT Secret из Supabase → Settings → API |
 

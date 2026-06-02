@@ -1,4 +1,4 @@
-"""OpenAI spend guard — $2 budget + token cap with persistent tracking."""
+"""OpenAI spend guard — blocks AI when USD budget is exhausted."""
 from __future__ import annotations
 
 import json
@@ -18,7 +18,7 @@ _WHISPER_TOKENS_PER_MINUTE = 1500
 
 
 class AiBudgetExceeded(Exception):
-    """Raised when OpenAI budget or token limit is exhausted."""
+    """Raised when OpenAI USD budget is exhausted."""
 
     def __init__(self, usage: "AiUsageSnapshot"):
         self.usage = usage
@@ -145,13 +145,8 @@ def get_usage_snapshot() -> AiUsageSnapshot:
     total_cost = float(raw["total_cost_usd"])
     budget = _budget_usd()
     cap = _max_tokens()
-    blocked = total_cost >= budget or total_tokens >= cap
-    reason = None
-    if blocked:
-        if total_cost >= budget:
-            reason = f"Лимит OpenAI ${budget:.2f} исчерпан. AI заблокирован."
-        else:
-            reason = f"Лимит {cap:,} токенов исчерпан. AI заблокирован."
+    blocked = total_cost >= budget
+    reason = f"Лимит OpenAI ${budget:.2f} исчерпан. AI заблокирован." if blocked else None
     return AiUsageSnapshot(
         total_tokens=total_tokens,
         total_cost_usd=total_cost,

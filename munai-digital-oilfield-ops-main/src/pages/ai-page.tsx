@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
-import { Sparkles, Send, Bot, User, AlertTriangle, TrendingDown, Activity, Loader2, Ban } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Sparkles, Send, Bot, User, AlertTriangle, TrendingDown, Activity, Loader2 } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { aiApi } from "@/lib/api";
 import { toast } from "sonner";
 import { useSession } from "@/lib/session";
@@ -15,21 +14,12 @@ import { useNetworkStatus } from "@/lib/network-status";
 export default function AIPage() {
   const { role } = useSession();
   const { slow } = useNetworkStatus();
-  const queryClient = useQueryClient();
   const aiHelp = useFeatureHelp("ai.assistant", role);
   const [messages, setMessages] = useState<{ role: "user" | "ai"; text: string }[]>([
     { role: "ai", text: "Здравствуйте! Я — AI-ассистент MUNAI. Спросите меня про скважины, отчёты или производство." },
   ]);
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
-
-  const { data: usage } = useQuery({
-    queryKey: ["ai-usage"],
-    queryFn: aiApi.usage,
-    refetchInterval: pollIntervalMs(60_000, slow),
-  });
-
-  const aiBlocked = usage?.blocked ?? false;
 
   const { data: insights } = useQuery({
     queryKey: ["ai-insights"],
@@ -41,12 +31,6 @@ export default function AIPage() {
     mutationFn: (msg: string) => aiApi.chat(msg),
     onSuccess: (data) => {
       setMessages((m) => [...m, { role: "ai", text: data.reply }]);
-      if (data.usage) {
-        queryClient.setQueryData(["ai-usage"], data.usage);
-      }
-      if (data.ai_blocked) {
-        toast.warning("Лимит OpenAI исчерпан — AI заблокирован");
-      }
     },
     onError: (e: Error) => {
       toast.error(e.message);
@@ -60,7 +44,7 @@ export default function AIPage() {
 
   const send = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || chatMutation.isPending || aiBlocked) return;
+    if (!input.trim() || chatMutation.isPending) return;
     const text = input.trim();
     setMessages((m) => [...m, { role: "user", text }]);
     setInput("");
@@ -93,24 +77,6 @@ export default function AIPage() {
         <FeatureHelpButton featureId="ai.assistant" role={role} />
       </div>
 
-      {usage && (
-        <div className={`rounded-2xl border p-4 space-y-3 ${aiBlocked ? "border-destructive/50 bg-destructive/5" : "border-border bg-card"}`}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="font-semibold text-sm flex items-center gap-2">
-              {aiBlocked ? <Ban className="h-4 w-4 text-destructive" /> : <Sparkles className="h-4 w-4 text-primary" />}
-              Бюджет OpenAI: ${usage.total_cost_usd.toFixed(4)} / ${usage.budget_usd.toFixed(2)}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Токены: {usage.total_tokens.toLocaleString()} / {usage.max_tokens.toLocaleString()}
-            </div>
-          </div>
-          <Progress value={Math.max(usage.usage_percent_budget, usage.usage_percent_tokens)} className="h-2" />
-          {aiBlocked && (
-            <p className="text-sm text-destructive">{usage.block_reason ?? "AI заблокирован — лимит $2 или 100 000 токенов исчерпан."}</p>
-          )}
-        </div>
-      )}
-
       <div className="grid md:grid-cols-3 gap-4">
         {insightData.map((ins, i) => (
           <InsightCard
@@ -129,9 +95,7 @@ export default function AIPage() {
             <div className="h-8 w-8 rounded-lg bg-primary grid place-items-center"><Bot className="h-4 w-4 text-primary-foreground" /></div>
             <div>
               <div className="font-semibold text-sm">AI-ассистент MUNAI</div>
-              <div className="text-xs text-muted-foreground">
-                {aiBlocked ? "Заблокирован · лимит OpenAI" : chatMutation.isPending ? "Думаю…" : "Онлайн · экономный режим"}
-              </div>
+              <div className="text-xs text-muted-foreground">{chatMutation.isPending ? "Думаю…" : "Онлайн · отвечает за секунды"}</div>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -156,14 +120,8 @@ export default function AIPage() {
             <div ref={bottomRef} />
           </div>
           <form onSubmit={send} className="p-3 border-t border-border flex gap-2">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={aiBlocked ? "AI заблокирован — лимит OpenAI исчерпан" : "Спросите AI…"}
-              className="h-11"
-              disabled={chatMutation.isPending || aiBlocked}
-            />
-            <Button type="submit" className="h-11" disabled={chatMutation.isPending || !input.trim() || aiBlocked}>
+            <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Спросите AI…" className="h-11" disabled={chatMutation.isPending} />
+            <Button type="submit" className="h-11" disabled={chatMutation.isPending || !input.trim()}>
               <Send className="h-4 w-4" />
             </Button>
           </form>
@@ -179,8 +137,7 @@ export default function AIPage() {
           ]).map((rec, i) => (
             <button
               key={i}
-              className="w-full text-left rounded-xl border border-border p-3 text-sm hover:border-primary hover:bg-accent transition disabled:opacity-50"
-              disabled={aiBlocked}
+              className="w-full text-left rounded-xl border border-border p-3 text-sm hover:border-primary hover:bg-accent transition"
               onClick={() => { setInput(rec); }}
             >
               <div className="flex items-start gap-2">
