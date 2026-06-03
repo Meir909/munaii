@@ -38,10 +38,6 @@ export function releaseStaleScrollLock() {
   body.removeAttribute("data-scroll-locked");
   body.removeAttribute("data-radix-scroll-lock-scrollbar-size");
   body.removeAttribute("inert");
-
-  document.querySelectorAll("[data-radix-focus-guard]").forEach((node) => {
-    node.parentElement?.removeChild(node);
-  });
 }
 
 /** Run after Radix close animations / state updates finish. */

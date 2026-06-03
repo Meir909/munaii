@@ -118,6 +118,8 @@ function MapPage() {
   const [search, setSearch] = useState("");
   const [dragging, setDragging] = useState(false);
   const dragStart = useRef<{ x: number; y: number; lat: number; lng: number } | null>(null);
+  const panFrame = useRef<number | null>(null);
+  const panDelta = useRef({ dx: 0, dy: 0 });
 
   const { data: wells = [], isLoading } = useQuery({
     queryKey: ["wells-map"],
@@ -246,13 +248,28 @@ function MapPage() {
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!dragging || !dragStart.current) return;
-    const dx = e.clientX - dragStart.current.x;
-    const dy = e.clientY - dragStart.current.y;
-    panByPixels(dx, dy);
+    panDelta.current.dx += e.clientX - dragStart.current.x;
+    panDelta.current.dy += e.clientY - dragStart.current.y;
     dragStart.current = { x: e.clientX, y: e.clientY, lat: center.lat, lng: center.lng };
+
+    if (panFrame.current !== null) return;
+    panFrame.current = window.requestAnimationFrame(() => {
+      panFrame.current = null;
+      const { dx, dy } = panDelta.current;
+      panDelta.current = { dx: 0, dy: 0 };
+      if (dx !== 0 || dy !== 0) panByPixels(dx, dy);
+    });
   };
 
   const onPointerUp = () => {
+    if (panFrame.current !== null) {
+      window.cancelAnimationFrame(panFrame.current);
+      panFrame.current = null;
+    }
+    if (panDelta.current.dx !== 0 || panDelta.current.dy !== 0) {
+      panByPixels(panDelta.current.dx, panDelta.current.dy);
+      panDelta.current = { dx: 0, dy: 0 };
+    }
     setDragging(false);
     dragStart.current = null;
   };

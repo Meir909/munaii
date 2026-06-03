@@ -1,4 +1,5 @@
-import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar } from "recharts";
+import { Area, AreaChart, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar } from "recharts";
+import { SafeChartContainer } from "@/components/safe-chart-container";
 import { useQuery } from "@tanstack/react-query";
 import { dashboardApi } from "@/lib/api";
 import { pollIntervalMs } from "@/lib/query-client";
@@ -59,7 +60,14 @@ export default function KpiPage() {
             <XAxis dataKey="day" fontSize={12} tickLine={false} axisLine={false} />
             <YAxis fontSize={12} tickLine={false} axisLine={false} />
             <Tooltip />
-            <Area dataKey="oil" stroke="var(--color-primary)" strokeWidth={2.5} fill="url(#g)" name="Нефть" />
+            <Area
+              dataKey="oil"
+              stroke="var(--color-primary)"
+              strokeWidth={2.5}
+              fill="url(#g)"
+              name="Нефть"
+              isAnimationActive={false}
+            />
           </AreaChart>
         </Chart>
         <Chart title="Статусы скважин" subtitle="Количество по статусу">
@@ -68,7 +76,12 @@ export default function KpiPage() {
             <XAxis dataKey="name" fontSize={11} tickLine={false} axisLine={false} />
             <YAxis fontSize={11} tickLine={false} axisLine={false} />
             <Tooltip />
-            <Bar dataKey="v" fill="var(--color-primary)" radius={[8, 8, 0, 0]} />
+            <Bar
+              dataKey="v"
+              fill="var(--color-primary)"
+              radius={[8, 8, 0, 0]}
+              isAnimationActive={false}
+            />
           </BarChart>
         </Chart>
       </div>
@@ -78,12 +91,12 @@ export default function KpiPage() {
 
 function Chart({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactElement }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+    <div className="rounded-2xl border border-border bg-card p-5 min-w-0">
       <div className="mb-4">
         <h3 className="font-semibold">{title}</h3>
         <p className="text-xs text-muted-foreground">{subtitle}</p>
       </div>
-      <div className="h-64"><ResponsiveContainer width="100%" height="100%">{children}</ResponsiveContainer></div>
+      <SafeChartContainer>{children}</SafeChartContainer>
     </div>
   );
 }

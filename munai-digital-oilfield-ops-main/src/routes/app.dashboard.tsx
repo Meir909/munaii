@@ -1,13 +1,15 @@
+import { lazy, Suspense } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSession } from "@/lib/session";
-import { Droplets, AlertTriangle, FileText, TrendingUp, Sparkles, Mic, Plus, Users, ShieldCheck, BarChart3 } from "lucide-react";
+import { Droplets, AlertTriangle, FileText, TrendingUp, Sparkles, Mic, Plus, Users, ShieldCheck } from "lucide-react";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { StaleDataHint } from "@/components/stale-data-hint";
 import { useNetworkStatus } from "@/lib/network-status";
 import { pollIntervalMs } from "@/lib/query-client";
 import { Button } from "@/components/ui/button";
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, BarChart, Bar, CartesianGrid } from "recharts";
 import { StatusBadge } from "@/components/status-badge";
+
+const DashboardCharts = lazy(() => import("@/components/dashboard-charts"));
 import { AiScoreBadge } from "@/components/ai-score-badge";
 import { useQuery } from "@tanstack/react-query";
 import { dashboardApi, reportsApi, notificationsApi } from "@/lib/api";
@@ -118,48 +120,16 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Charts row */}
-      <div className="grid lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold">Добыча за неделю</h3>
-              <p className="text-xs text-muted-foreground">Нефть и газ, м³/сутки</p>
-            </div>
-            <BarChart3 className="h-5 w-5 text-muted-foreground" />
+      <Suspense
+        fallback={
+          <div className="grid lg:grid-cols-3 gap-5">
+            <div className="lg:col-span-2 h-80 rounded-2xl bg-muted animate-pulse" />
+            <div className="h-80 rounded-2xl bg-muted animate-pulse" />
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={productionTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
-                <XAxis dataKey="day" tickLine={false} axisLine={false} fontSize={12} />
-                <YAxis tickLine={false} axisLine={false} fontSize={12} />
-                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid var(--color-border)", background: "var(--color-card)" }} />
-                <Line type="monotone" dataKey="oil" stroke="var(--color-primary)" strokeWidth={3} dot={{ r: 4 }} name="Нефть" />
-                <Line type="monotone" dataKey="gas" stroke="var(--color-info)" strokeWidth={2} dot={{ r: 3 }} name="Газ" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Статусы скважин</h3>
-            <Link to="/app/wells" className="text-xs text-primary hover:underline">Все</Link>
-          </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={wellStatuses}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
-                <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={11} />
-                <YAxis tickLine={false} axisLine={false} fontSize={11} />
-                <Tooltip />
-                <Bar dataKey="v" fill="var(--color-primary)" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
+        }
+      >
+        <DashboardCharts productionTrend={productionTrend} wellStatuses={wellStatuses} />
+      </Suspense>
 
       {/* Recent reports & notifications */}
       <div className="grid lg:grid-cols-3 gap-5">

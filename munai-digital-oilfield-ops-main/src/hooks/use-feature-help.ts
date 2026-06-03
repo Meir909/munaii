@@ -18,7 +18,7 @@ export function useFeatureHelp(featureId: FeatureHelpId, role: Role, enabled = t
       return;
     }
     if (!hasSeenFeatureHelp(featureId, role)) {
-      const t = window.setTimeout(() => setOpen(true), 400);
+      const t = window.setTimeout(() => setOpen(true), 1200);
       return () => window.clearTimeout(t);
     }
   }, [featureId, role, enabled]);
