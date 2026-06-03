@@ -46,14 +46,29 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (!isSupabaseConfigured()) return;
 
     let active = true;
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!active || !data.session) return;
+
+    const syncSession = async (
+      session: NonNullable<Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]>,
+      forceProfile = false,
+    ) => {
+      const stored = useAuthStore.getState().user;
+      if (!forceProfile && stored?.id === session.user.id && useAuthStore.getState().token) {
+        if (useAuthStore.getState().token !== session.access_token) {
+          setAuth(session.access_token, stored);
+        }
+        return;
+      }
       try {
         const profile = await authApi.me();
-        if (active) setAuth(data.session.access_token, profile);
+        if (active) setAuth(session.access_token, profile);
       } catch {
         if (active) clearAuth();
       }
+    };
+
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!active || !data.session) return;
+      await syncSession(data.session);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -61,10 +76,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         clearAuth();
         return;
       }
-      authApi
-        .me()
-        .then((profile) => setAuth(session.access_token, profile))
-        .catch(() => clearAuth());
+      if (event === "TOKEN_REFRESHED") {
+        const stored = useAuthStore.getState().user;
+        if (stored) {
+          setAuth(session.access_token, stored);
+          return;
+        }
+      }
+      void syncSession(session, event === "USER_UPDATED");
     });
 
     return () => {

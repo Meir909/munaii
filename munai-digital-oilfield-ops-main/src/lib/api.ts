@@ -478,6 +478,13 @@ async function getProfile(userId: string, fallbackEmail: string): Promise<ApiUse
   return profileToUser(data, fallbackEmail);
 }
 
+let cachedCurrentUser: ApiUser | null = null;
+
+/** Сбрасывает кэш после выхода (иначе лишние round-trip к Supabase). */
+export function invalidateCurrentUserCache() {
+  cachedCurrentUser = null;
+}
+
 async function currentUser(): Promise<ApiUser> {
   if (useFastApi()) {
     const token = getToken();
@@ -485,11 +492,15 @@ async function currentUser(): Promise<ApiUser> {
     return get<ApiUser>("/auth/me");
   }
   if (!isSupabaseConfigured()) return demoCurrentUser();
+  if (cachedCurrentUser) return cachedCurrentUser;
+
   assertSupabase();
   const { data, error } = await supabase.auth.getUser();
   if (error) throw new Error(error.message);
   if (!data.user?.email) throw new Error("Пользователь не найден");
-  return getProfile(data.user.id, data.user.email);
+  const user = await getProfile(data.user.id, data.user.email);
+  cachedCurrentUser = user;
+  return user;
 }
 
 function requireRole(user: ApiUser, roles: ApiUser["role"][]) {
@@ -705,6 +716,7 @@ export const authApi = {
       await supabase.auth.signOut();
       throw new Error("Аккаунт деактивирован");
     }
+    cachedCurrentUser = user;
 
     return { access_token: data.session.access_token, token_type: "bearer", user };
   },
@@ -817,8 +829,36 @@ export const dashboardApi = {
       };
     }
     assertSupabase();
-    const [wells, reports] = await Promise.all([wellsApi.list(), reportsApi.list()]);
-    const total_production = wells.reduce((sum, well) => sum + well.production24h, 0);
+    const user = await currentUser();
+
+    let reportsQuery = supabase
+      .from("reports")
+      .select("status,production24h,well_id,created_at")
+      .order("created_at", { ascending: false });
+    if (user.role === "operator") reportsQuery = reportsQuery.eq("operator_id", user.id);
+
+    const [{ data: wellRows, error: wellsError }, { data: reportRows, error: reportsError }] =
+      await Promise.all([
+        supabase.from("wells").select("id,status,production24h,product"),
+        reportsQuery.returns<
+          Array<{
+            status: string;
+            production24h: number | null;
+            well_id: string;
+            created_at: string;
+          }>
+        >(),
+      ]);
+
+    if (wellsError) throw new Error(wellsError.message);
+    if (reportsError) throw new Error(reportsError.message);
+
+    const wells = wellRows ?? [];
+    const reports = reportRows ?? [];
+    const productByWell = new Map(
+      wells.map((well) => [well.id, well.product as "oil" | "gas" | undefined]),
+    );
+    const total_production = wells.reduce((sum, well) => sum + (well.production24h ?? 0), 0);
     const byDay = new Map<string, { day: string; oil: number; gas: number }>();
 
     reports.forEach((report) => {
@@ -826,26 +866,28 @@ export const dashboardApi = {
         day: "2-digit",
         month: "2-digit",
       });
-      const well = wells.find((item) => item.id === report.well_id);
+      const product = productByWell.get(report.well_id);
       const current = byDay.get(day) ?? { day, oil: 0, gas: 0 };
-      if (well?.product === "gas") current.gas += report.production24h ?? 0;
-      else current.oil += report.production24h ?? 0;
+      const amount = report.production24h ?? 0;
+      if (product === "gas") current.gas += amount;
+      else current.oil += amount;
       byDay.set(day, current);
     });
 
+    const countStatus = (status: string) => wells.filter((well) => well.status === status).length;
+
     return {
-      active_wells: wells.filter((well) => well.status === "active").length,
-      warning_wells: wells.filter((well) => well.status === "warning" || well.status === "broken")
-        .length,
+      active_wells: countStatus("active"),
+      warning_wells: countStatus("warning") + countStatus("broken"),
       pending_reports: reports.filter((report) => report.status === "pending").length,
       flagged_reports: reports.filter((report) => report.status === "flagged").length,
       total_production,
       production_trend: [...byDay.values()].slice(-7),
       well_statuses: [
-        { name: "Активные", v: wells.filter((well) => well.status === "active").length },
-        { name: "Внимание", v: wells.filter((well) => well.status === "warning").length },
-        { name: "Авария", v: wells.filter((well) => well.status === "broken").length },
-        { name: "Неактивные", v: wells.filter((well) => well.status === "inactive").length },
+        { name: "Активные", v: countStatus("active") },
+        { name: "Внимание", v: countStatus("warning") },
+        { name: "Авария", v: countStatus("broken") },
+        { name: "Неактивные", v: countStatus("inactive") },
       ],
     };
   },
@@ -1135,6 +1177,28 @@ export const wellsApi = {
 };
 
 export const reportsApi = {
+  /** Последние отчёты для дашборда — без полной загрузки списка. */
+  listRecent: async (limit = 5): Promise<ApiReport[]> => {
+    if (useFastApi()) return reportsApi.list(undefined, "all").then((rows) => rows.slice(0, limit));
+    if (!isSupabaseConfigured()) {
+      const rows = await reportsApi.list();
+      return rows.slice(0, limit);
+    }
+    const user = await currentUser();
+    let query = supabase
+      .from("reports")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (user.role === "operator") query = query.eq("operator_id", user.id);
+
+    const { data, error } = await query.returns<ReportRow[]>();
+    if (error) throw new Error(error.message);
+    const rows = data ?? [];
+    const wells = await wellsById(rows.map((row) => row.well_id));
+    const profiles = await profilesById(rows.map((row) => row.operator_id));
+    return rows.map((row) => mapReport(row, wells, profiles));
+  },
   list: async (q?: string, status?: string): Promise<ApiReport[]> => {
     if (useFastApi()) {
       const params = new URLSearchParams();

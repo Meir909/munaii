@@ -9,6 +9,7 @@ import { useNotifStore } from "@/lib/store";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { NetworkStatusBanner } from "@/components/network-status-banner";
 import { useNetworkStatus } from "@/lib/network-status";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app")({
   beforeLoad: async ({ location }) => {
@@ -32,26 +33,21 @@ function AppLayout() {
   const { setNotifications } = useNotifStore();
   const { offline } = useNetworkStatus();
 
-  // Redirect if not authenticated
+  const { data: notifications } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: notificationsApi.list,
+    enabled: Boolean(token) && !offline,
+    refetchInterval: 30_000,
+    staleTime: 20_000,
+  });
+
+  useEffect(() => {
+    if (notifications) setNotifications(notifications);
+  }, [notifications, setNotifications]);
+
   useEffect(() => {
     if (!token) nav({ to: "/login" });
   }, [token, nav]);
-
-  // Load notifications on mount
-  useEffect(() => {
-    if (!token || offline) return;
-    notificationsApi
-      .list()
-      .then(setNotifications)
-      .catch(() => {});
-    const interval = setInterval(() => {
-      notificationsApi
-        .list()
-        .then(setNotifications)
-        .catch(() => {});
-    }, 30_000);
-    return () => clearInterval(interval);
-  }, [token, setNotifications, offline]);
 
   if (!token) return null;
 

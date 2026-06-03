@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { ApiUser, ApiNotification, DashboardStats, ApiWell, ApiReport } from "./api";
+import { invalidateCurrentUserCache } from "./api";
 import { isSupabaseConfigured, supabase } from "./supabase";
 
 // ── Auth Store ────────────────────────────────────────────────────────────────
@@ -24,6 +25,7 @@ export const useAuthStore = create<AuthState>()(
         set({ token, user });
       },
       clearAuth: () => {
+        invalidateCurrentUserCache();
         if (isSupabaseConfigured()) void supabase.auth.signOut();
         localStorage.removeItem("munai_token");
         localStorage.removeItem("munai_user");

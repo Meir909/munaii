@@ -10,7 +10,8 @@ import { StatusBadge } from "@/components/status-badge";
 const DashboardCharts = lazy(() => import("@/components/dashboard-charts"));
 import { AiScoreBadge } from "@/components/ai-score-badge";
 import { useQuery } from "@tanstack/react-query";
-import { dashboardApi, reportsApi, notificationsApi } from "@/lib/api";
+import { dashboardApi, reportsApi } from "@/lib/api";
+import { useNotifStore } from "@/lib/store";
 import { formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
 
@@ -21,22 +22,19 @@ export const Route = createFileRoute("/app/dashboard")({
 
 function Dashboard() {
   const { role, user } = useSession();
+  const { notifications } = useNotifStore();
+
   const { data: stats, isLoading: statsLoading, isFetching: statsFetching } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: dashboardApi.stats,
     refetchInterval: 60_000,
+    staleTime: 30_000,
   });
 
   const { data: reports = [] } = useQuery({
-    queryKey: ["reports"],
-    queryFn: () => reportsApi.list(),
-    refetchInterval: 30_000,
-  });
-
-  const { data: notifications = [] } = useQuery({
-    queryKey: ["notifications"],
-    queryFn: notificationsApi.list,
-    refetchInterval: 30_000,
+    queryKey: ["reports", "recent"],
+    queryFn: () => reportsApi.listRecent(5),
+    staleTime: 30_000,
   });
 
   const activeWells = stats?.active_wells ?? 0;
