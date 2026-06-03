@@ -4,6 +4,7 @@ import { I18nProvider } from "@/lib/i18n";
 import { ThemeProvider } from "@/lib/theme";
 import { SessionProvider } from "@/lib/session";
 import { Toaster } from "@/components/ui/sonner";
+import { ScrollLockGuard } from "@/components/scroll-lock-guard";
 
 function NotFoundComponent() {
   return (
@@ -54,6 +55,7 @@ function RootComponent() {
     <ThemeProvider>
       <I18nProvider>
         <SessionProvider>
+          <ScrollLockGuard />
           <Outlet />
           <Toaster />
         </SessionProvider>

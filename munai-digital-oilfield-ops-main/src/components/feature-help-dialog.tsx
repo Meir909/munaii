@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,7 @@ import {
   type FeatureHelpId,
 } from "@/lib/feature-help";
 import type { Role } from "@/lib/session";
+import { releaseStaleScrollLock } from "@/lib/dom-scroll-lock";
 
 type Props = {
   featureId: FeatureHelpId;
@@ -25,11 +26,28 @@ type Props = {
 
 export function FeatureHelpDialog({ featureId, role, open, onOpenChange }: Props) {
   const content = getFeatureHelp(featureId, role);
+
+  useEffect(() => {
+    if (open && !content) onOpenChange(false);
+  }, [open, content, onOpenChange]);
+
+  useEffect(() => {
+    if (!open) {
+      releaseStaleScrollLock();
+      return;
+    }
+    return () => {
+      onOpenChange(false);
+      releaseStaleScrollLock();
+    };
+  }, [open, onOpenChange]);
+
   if (!content) return null;
 
   const handleClose = (next: boolean) => {
     if (!next) markFeatureHelpSeen(featureId, role);
     onOpenChange(next);
+    if (!next) releaseStaleScrollLock();
   };
 
   return (
@@ -100,5 +118,3 @@ export function FeatureHelpButton({
     </>
   );
 }
-
-import { useState } from "react";
