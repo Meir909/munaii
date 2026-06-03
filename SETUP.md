@@ -7,6 +7,11 @@
 3. Затем `supabase/migrations/20260603_ai_report_columns.sql`
 4. (Опционально) `supabase/demo_seed.sql` — демо-скважины
 5. Authentication → Users → создайте пользователей или используйте Register в приложении
+6. **Authentication → URL Configuration** (иначе письма ведут на localhost):
+   - **Site URL**: `https://ваш-сайт.vercel.app` (ваш реальный адрес на Vercel)
+   - **Redirect URLs** (добавьте все):
+     - `https://ваш-сайт.vercel.app/**`
+     - `http://localhost:5173/**` (для локальной разработки)
 
 ## 2. Переменные фронтенда
 
@@ -15,6 +20,7 @@
 ```
 VITE_SUPABASE_URL=https://xxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
+VITE_SITE_URL=https://ваш-сайт.vercel.app
 VITE_API_URL=/api
 ```
 
@@ -31,7 +37,7 @@ VITE_API_URL=/api
 | `AI_USAGE_FILE` | Файл учёта расхода (на Vercel: `/tmp/munai_ai_usage.json`) |
 | `SUPABASE_JWT_SECRET` | JWT Secret из Supabase → Settings → API |
 
-Также добавьте `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY` для сборки фронтенда.
+Также добавьте для сборки фронтенда: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, **`VITE_SITE_URL`** (тот же URL, что Site URL в Supabase).
 
 ## 4. Запуск
 

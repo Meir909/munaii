@@ -1,3 +1,4 @@
+import { getAuthRedirectUrl } from "./app-origin";
 import { isSupabaseConfigured, supabase } from "./supabase";
 import { aiProxy, type AiReportDraft, type AiUsage } from "./ai-proxy";
 import {
@@ -738,7 +739,10 @@ export const authApi = {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name, role: safeRole, position, region } },
+      options: {
+        emailRedirectTo: getAuthRedirectUrl("/auth/confirm"),
+        data: { name, role: safeRole, position, region },
+      },
     });
     if (error) throw new Error(error.message);
     if (!data.user) throw new Error("Supabase не вернул пользователя");
@@ -773,7 +777,7 @@ export const authApi = {
       if (!exists) throw new Error("Пользователь с таким email не найден");
       return { ok: true };
     }
-    const redirectTo = `${window.location.origin}/app/profile`;
+    const redirectTo = getAuthRedirectUrl("/app/profile");
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -1553,6 +1557,7 @@ export const usersApi = {
       email: body.email,
       password: body.password,
       options: {
+        emailRedirectTo: getAuthRedirectUrl("/auth/confirm"),
         data: {
           name: body.name,
           role: body.role,

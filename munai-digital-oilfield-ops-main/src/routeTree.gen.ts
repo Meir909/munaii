@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
 import { Route as AppWellsRouteImport } from './routes/app.wells'
 import { Route as AppTrainingRouteImport } from './routes/app.training'
 import { Route as AppSettingsRouteImport } from './routes/app.settings'
@@ -53,6 +54,11 @@ const AppRoute = AppRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthConfirmRoute = AuthConfirmRouteImport.update({
+  id: '/auth/confirm',
+  path: '/auth/confirm',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppWellsRoute = AppWellsRouteImport.update({
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/app/settings': typeof AppSettingsRoute
   '/app/training': typeof AppTrainingRoute
   '/app/wells': typeof AppWellsRoute
+  '/auth/confirm': typeof AuthConfirmRoute
   '/app/reports/new': typeof AppReportsNewRoute
 }
 export interface FileRoutesByTo {
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AppSettingsRoute
   '/app/training': typeof AppTrainingRoute
   '/app/wells': typeof AppWellsRoute
+  '/auth/confirm': typeof AuthConfirmRoute
   '/app/reports/new': typeof AppReportsNewRoute
 }
 export interface FileRoutesById {
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   '/app/settings': typeof AppSettingsRoute
   '/app/training': typeof AppTrainingRoute
   '/app/wells': typeof AppWellsRoute
+  '/auth/confirm': typeof AuthConfirmRoute
   '/app/reports/new': typeof AppReportsNewRoute
 }
 export interface FileRouteTypes {
@@ -220,6 +229,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/training'
     | '/app/wells'
+    | '/auth/confirm'
     | '/app/reports/new'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/training'
     | '/app/wells'
+    | '/auth/confirm'
     | '/app/reports/new'
   id:
     | '__root__'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/training'
     | '/app/wells'
+    | '/auth/confirm'
     | '/app/reports/new'
   fileRoutesById: FileRoutesById
 }
@@ -273,6 +285,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  AuthConfirmRoute: typeof AuthConfirmRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -310,6 +323,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/confirm': {
+      id: '/auth/confirm'
+      path: '/auth/confirm'
+      fullPath: '/auth/confirm'
+      preLoaderRoute: typeof AuthConfirmRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/wells': {
@@ -474,6 +494,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  AuthConfirmRoute: AuthConfirmRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
