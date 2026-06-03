@@ -1,23 +1,32 @@
 import { useEffect } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { releaseStaleScrollLock } from "@/lib/dom-scroll-lock";
 
-/** Prevents the app from staying frozen when a modal unmounts without closing. */
+/**
+ * Releases orphaned body scroll/pointer locks after navigation.
+ * Avoids a document-wide MutationObserver — that blocked the main thread during scroll.
+ */
 export function ScrollLockGuard() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  useEffect(() => {
+    releaseStaleScrollLock();
+  }, [pathname]);
+
   useEffect(() => {
     releaseStaleScrollLock();
 
-    const observer = new MutationObserver(() => {
-      releaseStaleScrollLock();
-    });
+    const onVisible = () => {
+      if (document.visibilityState === "visible") releaseStaleScrollLock();
+    };
 
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["data-state", "data-scroll-locked"],
-    });
+    window.addEventListener("focus", releaseStaleScrollLock);
+    document.addEventListener("visibilitychange", onVisible);
 
-    return () => observer.disconnect();
+    return () => {
+      window.removeEventListener("focus", releaseStaleScrollLock);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   return null;

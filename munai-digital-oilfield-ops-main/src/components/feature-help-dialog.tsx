@@ -33,21 +33,21 @@ export function FeatureHelpDialog({ featureId, role, open, onOpenChange }: Props
 
   useEffect(() => {
     if (!open) {
-      releaseStaleScrollLock();
-      return;
+      const id = window.requestAnimationFrame(() => releaseStaleScrollLock());
+      return () => window.cancelAnimationFrame(id);
     }
+
     return () => {
-      onOpenChange(false);
-      releaseStaleScrollLock();
+      window.requestAnimationFrame(() => releaseStaleScrollLock());
     };
-  }, [open, onOpenChange]);
+  }, [open]);
 
   if (!content) return null;
 
   const handleClose = (next: boolean) => {
     if (!next) markFeatureHelpSeen(featureId, role);
     onOpenChange(next);
-    if (!next) releaseStaleScrollLock();
+    if (!next) window.requestAnimationFrame(() => releaseStaleScrollLock());
   };
 
   return (
