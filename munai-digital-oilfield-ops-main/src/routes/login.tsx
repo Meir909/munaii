@@ -24,7 +24,7 @@ function LoginPage() {
   const nav = useNavigate();
   const { setAuth } = useAuthStore();
   const [email, setEmail] = useState("operator@munai.kz");
-  const [password, setPassword] = useState("demo");
+  const [password, setPassword] = useState("demo1234");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -56,8 +56,8 @@ function LoginPage() {
 
   const handleDemo = (demoEmail: string) => {
     setEmail(demoEmail);
-    setPassword("demo");
-    void signIn(demoEmail, "demo");
+    setPassword("demo1234");
+    void signIn(demoEmail, "demo1234");
   };
 
   return (

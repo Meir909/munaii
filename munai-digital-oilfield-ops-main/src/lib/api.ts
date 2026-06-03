@@ -689,7 +689,14 @@ export const authApi = {
     }
     assertSupabase();
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.message === "Invalid login credentials") {
+        throw new Error(
+          "Неверный email или пароль. Демо: operator@munai.kz / demo1234 — пользователь должен быть создан в Supabase → Authentication → Users.",
+        );
+      }
+      throw new Error(error.message);
+    }
     if (!data.session || !data.user.email) throw new Error("Сессия Supabase не создана");
 
     const user = await getProfile(data.user.id, data.user.email);
