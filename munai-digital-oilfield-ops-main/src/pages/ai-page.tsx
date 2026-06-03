@@ -8,12 +8,9 @@ import { toast } from "sonner";
 import { useSession } from "@/lib/session";
 import { useFeatureHelp } from "@/hooks/use-feature-help";
 import { FeatureHelpDialog, FeatureHelpButton } from "@/components/feature-help-dialog";
-import { pollIntervalMs } from "@/lib/query-client";
-import { useNetworkStatus } from "@/lib/network-status";
 
 export default function AIPage() {
   const { role } = useSession();
-  const { slow } = useNetworkStatus();
   const aiHelp = useFeatureHelp("ai.assistant", role);
   const [messages, setMessages] = useState<{ role: "user" | "ai"; text: string }[]>([
     { role: "ai", text: "Здравствуйте! Я — AI-ассистент MUNAI. Спросите меня про скважины, отчёты или производство." },
@@ -24,7 +21,7 @@ export default function AIPage() {
   const { data: insights } = useQuery({
     queryKey: ["ai-insights"],
     queryFn: aiApi.insights,
-    refetchInterval: pollIntervalMs(120_000, slow),
+    refetchInterval: 120_000,
   });
 
   const chatMutation = useMutation({

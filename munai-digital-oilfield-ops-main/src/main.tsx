@@ -5,9 +5,8 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import "./styles.css";
 import { getRouter } from "./router";
 import { createQueryClient, persistOptions } from "./lib/query-client";
-import { detectSlowNetwork } from "./lib/network-status";
 
-const queryClient = createQueryClient(detectSlowNetwork());
+const queryClient = createQueryClient();
 const router = getRouter(queryClient);
 
 createRoot(document.getElementById("root")!).render(

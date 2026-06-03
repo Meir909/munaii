@@ -4,8 +4,6 @@ import { useSession } from "@/lib/session";
 import { Droplets, AlertTriangle, FileText, TrendingUp, Sparkles, Mic, Plus, Users, ShieldCheck } from "lucide-react";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { StaleDataHint } from "@/components/stale-data-hint";
-import { useNetworkStatus } from "@/lib/network-status";
-import { pollIntervalMs } from "@/lib/query-client";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 
@@ -23,24 +21,22 @@ export const Route = createFileRoute("/app/dashboard")({
 
 function Dashboard() {
   const { role, user } = useSession();
-  const { slow } = useNetworkStatus();
-
   const { data: stats, isLoading: statsLoading, isFetching: statsFetching } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: dashboardApi.stats,
-    refetchInterval: pollIntervalMs(60_000, slow),
+    refetchInterval: 60_000,
   });
 
   const { data: reports = [] } = useQuery({
     queryKey: ["reports"],
     queryFn: () => reportsApi.list(),
-    refetchInterval: pollIntervalMs(30_000, slow),
+    refetchInterval: 30_000,
   });
 
   const { data: notifications = [] } = useQuery({
     queryKey: ["notifications"],
     queryFn: notificationsApi.list,
-    refetchInterval: pollIntervalMs(30_000, slow),
+    refetchInterval: 30_000,
   });
 
   const activeWells = stats?.active_wells ?? 0;

@@ -28,8 +28,6 @@ import {
 import { toast } from "sonner";
 import { useFeatureHelp } from "@/hooks/use-feature-help";
 import { FeatureHelpDialog, FeatureHelpButton } from "@/components/feature-help-dialog";
-import { useNetworkStatus } from "@/lib/network-status";
-import { pollIntervalMs } from "@/lib/query-client";
 
 export const Route = createFileRoute("/app/map")({
   head: () => ({ meta: [{ title: "Карта скважин - MUNAI" }] }),
@@ -105,7 +103,6 @@ function wellToParams(well: ApiWell): WellParams {
 function MapPage() {
   const { user, role } = useSession();
   const mapHelp = useFeatureHelp("map.controls", role);
-  const { liteMode, slow } = useNetworkStatus();
   const queryClient = useQueryClient();
   const mapRef = useRef<HTMLDivElement>(null);
 
@@ -124,7 +121,7 @@ function MapPage() {
   const { data: wells = [], isLoading } = useQuery({
     queryKey: ["wells-map"],
     queryFn: () => wellsApi.list(),
-    refetchInterval: pollIntervalMs(15_000, slow),
+    refetchInterval: 15_000,
   });
 
   useEffect(() => {
@@ -381,24 +378,18 @@ function MapPage() {
           onWheel={onWheel}
         >
           <div className="absolute inset-0 bg-muted" />
-          {!liteMode &&
-            tiles.map((tile) => (
-              <img
-                key={tile.key}
-                src={tile.url}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                draggable={false}
-                className="absolute h-64 w-64 select-none pointer-events-none"
-                style={{ left: tile.left, top: tile.top }}
-              />
-            ))}
-          {liteMode && (
-            <div className="absolute bottom-14 left-3 text-xs bg-card/90 backdrop-blur px-3 py-1.5 rounded-md border border-border pointer-events-none z-10">
-              Упрощённая карта — без подложки OSM (экономия трафика)
-            </div>
-          )}
+          {tiles.map((tile) => (
+            <img
+              key={tile.key}
+              src={tile.url}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              draggable={false}
+              className="absolute h-64 w-64 select-none pointer-events-none"
+              style={{ left: tile.left, top: tile.top }}
+            />
+          ))}
           <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(to_right,oklch(0_0_0/.08)_1px,transparent_1px),linear-gradient(to_bottom,oklch(0_0_0/.08)_1px,transparent_1px)] [background-size:64px_64px]" />
           <div className="absolute top-3 left-3 text-xs bg-card/90 backdrop-blur px-3 py-1.5 rounded-md border border-border flex items-center gap-2 pointer-events-none">
             <Crosshair className="h-3.5 w-3.5" />

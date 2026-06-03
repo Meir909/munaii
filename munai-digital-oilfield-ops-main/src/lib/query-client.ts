@@ -12,28 +12,28 @@ const PERSIST_KEYS = new Set([
   "ai-insights",
 ]);
 
-export function getDefaultQueryOptions(slowNetwork = false): DefaultOptions {
+export function getDefaultQueryOptions(): DefaultOptions {
   return {
     queries: {
-      staleTime: slowNetwork ? 10 * 60_000 : 5 * 60_000,
+      staleTime: 5 * 60_000,
       gcTime: 24 * 60 * 60_000,
-      retry: 3,
-      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000),
-      refetchOnWindowFocus: !slowNetwork,
+      retry: 1,
+      retryDelay: 1000,
+      refetchOnWindowFocus: true,
       refetchOnReconnect: true,
       networkMode: "always",
     },
     mutations: {
-      retry: 2,
-      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15_000),
+      retry: 1,
+      retryDelay: 1000,
       networkMode: "always",
     },
   };
 }
 
-export function createQueryClient(slowNetwork = false) {
+export function createQueryClient() {
   return new QueryClient({
-    defaultOptions: getDefaultQueryOptions(slowNetwork),
+    defaultOptions: getDefaultQueryOptions(),
   });
 }
 
@@ -64,8 +64,3 @@ export const persistOptions = {
     },
   },
 };
-
-/** Интервалы опроса: реже при медленной сети */
-export function pollIntervalMs(baseMs: number, slowNetwork: boolean) {
-  return slowNetwork ? baseMs * 2 : baseMs;
-}

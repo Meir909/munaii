@@ -12,8 +12,6 @@ import { formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
 import { useSession } from "@/lib/session";
 import { PageSkeleton } from "@/components/page-skeleton";
-import { useNetworkStatus } from "@/lib/network-status";
-import { pollIntervalMs } from "@/lib/query-client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/app/reports")({
@@ -23,7 +21,6 @@ export const Route = createFileRoute("/app/reports")({
 
 function ReportsPage() {
   const { role } = useSession();
-  const { slow } = useNetworkStatus();
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -31,7 +28,7 @@ function ReportsPage() {
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["reports", q, statusFilter],
     queryFn: () => reportsApi.list(q, statusFilter),
-    refetchInterval: pollIntervalMs(30_000, slow),
+    refetchInterval: 30_000,
   });
 
   const deleteReport = useMutation({

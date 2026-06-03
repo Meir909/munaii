@@ -9,7 +9,6 @@ import { useNotifStore } from "@/lib/store";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { NetworkStatusBanner } from "@/components/network-status-banner";
 import { useNetworkStatus } from "@/lib/network-status";
-import { pollIntervalMs } from "@/lib/query-client";
 
 export const Route = createFileRoute("/app")({
   beforeLoad: async ({ location }) => {
@@ -31,8 +30,7 @@ function AppLayout() {
   const { token } = useAuthStore();
   const nav = useNavigate();
   const { setNotifications } = useNotifStore();
-  const { offline, slow } = useNetworkStatus();
-  const notifPollMs = pollIntervalMs(30_000, slow);
+  const { offline } = useNetworkStatus();
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -51,9 +49,9 @@ function AppLayout() {
         .list()
         .then(setNotifications)
         .catch(() => {});
-    }, notifPollMs);
+    }, 30_000);
     return () => clearInterval(interval);
-  }, [token, setNotifications, offline, notifPollMs]);
+  }, [token, setNotifications, offline]);
 
   if (!token) return null;
 

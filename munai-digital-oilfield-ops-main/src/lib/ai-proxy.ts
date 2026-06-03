@@ -1,5 +1,4 @@
 import { isSupabaseConfigured, supabase } from "./supabase";
-import { fetchWithRetry } from "./fetch-retry";
 import type { ApiWell } from "./api";
 
 const BASE_URL =
@@ -76,7 +75,7 @@ export const aiProxy = {
   transcribe: async (audio: Blob, filename = "voice.webm"): Promise<string> => {
     const form = new FormData();
     form.append("file", audio, filename);
-    const res = await fetchWithRetry(`${BASE_URL}/ai/transcribe`, {
+    const res = await fetch(`${BASE_URL}/ai/transcribe`, {
       method: "POST",
       headers: await authHeaders(false),
       body: form,
@@ -88,7 +87,7 @@ export const aiProxy = {
 
   /** GPT: text → report fields */
   parseVoice: async (text: string, wells: ApiWell[]): Promise<VoiceParsedFields> => {
-    const res = await fetchWithRetry(`${BASE_URL}/ai/parse-voice`, {
+    const res = await fetch(`${BASE_URL}/ai/parse-voice`, {
       method: "POST",
       headers: await authHeaders(),
       body: JSON.stringify({
@@ -119,7 +118,7 @@ export const aiProxy = {
     well: ApiWell,
     note?: string,
   ): Promise<AiReportDraft> => {
-    const res = await fetchWithRetry(`${BASE_URL}/ai/generate-report-draft`, {
+    const res = await fetch(`${BASE_URL}/ai/generate-report-draft`, {
       method: "POST",
       headers: await authHeaders(),
       body: JSON.stringify({
@@ -146,7 +145,7 @@ export const aiProxy = {
   },
 
   chat: async (message: string) => {
-    const res = await fetchWithRetry(`${BASE_URL}/ai/chat`, {
+    const res = await fetch(`${BASE_URL}/ai/chat`, {
       method: "POST",
       headers: await authHeaders(),
       body: JSON.stringify({ message }),
@@ -161,7 +160,7 @@ export const aiProxy = {
   },
 
   usage: async () => {
-    const res = await fetchWithRetry(`${BASE_URL}/ai/usage`, {
+    const res = await fetch(`${BASE_URL}/ai/usage`, {
       headers: await authHeaders(),
     });
     if (!res.ok) throw new Error(await parseError(res));
@@ -169,7 +168,7 @@ export const aiProxy = {
   },
 
   insights: async () => {
-    const res = await fetchWithRetry(`${BASE_URL}/ai/insights`, {
+    const res = await fetch(`${BASE_URL}/ai/insights`, {
       headers: await authHeaders(),
     });
     if (!res.ok) throw new Error(await parseError(res));

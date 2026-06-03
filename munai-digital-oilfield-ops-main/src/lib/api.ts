@@ -1,5 +1,4 @@
 import { isSupabaseConfigured, supabase } from "./supabase";
-import { fetchWithRetry } from "./fetch-retry";
 import { aiProxy, type AiReportDraft, type AiUsage } from "./ai-proxy";
 import {
   allUsersAdmin as mockUsersData,
@@ -115,7 +114,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetchWithRetry(`${BASE_URL}${path}`, { ...options, headers });
+  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if (res.status === 401) {
     localStorage.removeItem("munai_token");

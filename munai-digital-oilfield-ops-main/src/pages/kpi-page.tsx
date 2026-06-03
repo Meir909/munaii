@@ -2,18 +2,15 @@ import { Area, AreaChart, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar } 
 import { SafeChartContainer } from "@/components/safe-chart-container";
 import { useQuery } from "@tanstack/react-query";
 import { dashboardApi } from "@/lib/api";
-import { pollIntervalMs } from "@/lib/query-client";
-import { useNetworkStatus } from "@/lib/network-status";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { StaleDataHint } from "@/components/stale-data-hint";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function KpiPage() {
-  const { slow } = useNetworkStatus();
   const { data: stats, isLoading, isFetching } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: dashboardApi.stats,
-    refetchInterval: pollIntervalMs(60_000, slow),
+    refetchInterval: 60_000,
   });
 
   const productionTrend = stats?.production_trend ?? [];
