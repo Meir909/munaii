@@ -5,8 +5,20 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { scheduleReleaseStaleScrollLock } from "@/lib/dom-scroll-lock";
 
-const Dialog = DialogPrimitive.Root;
+const Dialog = ({
+  onOpenChange,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Root>) => (
+  <DialogPrimitive.Root
+    onOpenChange={(open) => {
+      onOpenChange?.(open);
+      if (!open) scheduleReleaseStaleScrollLock();
+    }}
+    {...props}
+  />
+);
 
 const DialogTrigger = DialogPrimitive.Trigger;
 

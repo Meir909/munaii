@@ -15,7 +15,6 @@ import {
   type FeatureHelpId,
 } from "@/lib/feature-help";
 import type { Role } from "@/lib/session";
-import { releaseStaleScrollLock } from "@/lib/dom-scroll-lock";
 
 type Props = {
   featureId: FeatureHelpId;
@@ -31,27 +30,15 @@ export function FeatureHelpDialog({ featureId, role, open, onOpenChange }: Props
     if (open && !content) onOpenChange(false);
   }, [open, content, onOpenChange]);
 
-  useEffect(() => {
-    if (!open) {
-      const id = window.requestAnimationFrame(() => releaseStaleScrollLock());
-      return () => window.cancelAnimationFrame(id);
-    }
-
-    return () => {
-      window.requestAnimationFrame(() => releaseStaleScrollLock());
-    };
-  }, [open]);
-
   if (!content) return null;
 
   const handleClose = (next: boolean) => {
     if (!next) markFeatureHelpSeen(featureId, role);
     onOpenChange(next);
-    if (!next) window.requestAnimationFrame(() => releaseStaleScrollLock());
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleClose} modal={false}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2 text-primary">

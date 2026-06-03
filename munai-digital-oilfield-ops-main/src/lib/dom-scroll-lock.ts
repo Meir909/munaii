@@ -1,4 +1,4 @@
-/** True when a Radix modal/drawer is still open. */
+/** True when a modal dialog/drawer is still open. */
 function hasOpenModalOverlay() {
   if (typeof document === "undefined") return false;
 
@@ -8,6 +8,8 @@ function hasOpenModalOverlay() {
         '[data-radix-dialog-overlay][data-state="open"]',
         '[data-radix-alert-dialog-overlay][data-state="open"]',
         '[data-vaul-drawer-wrapper][data-state="open"]',
+        '[role="dialog"][data-state="open"]',
+        '[role="alertdialog"][data-state="open"]',
       ].join(", "),
     ),
   );
@@ -28,10 +30,24 @@ export function releaseStaleScrollLock() {
   body.style.left = "";
   body.style.right = "";
   body.style.width = "";
+  body.style.marginRight = "";
 
   documentElement.style.overflow = "";
   documentElement.style.paddingRight = "";
 
   body.removeAttribute("data-scroll-locked");
   body.removeAttribute("data-radix-scroll-lock-scrollbar-size");
+  body.removeAttribute("inert");
+
+  document.querySelectorAll("[data-radix-focus-guard]").forEach((node) => {
+    node.parentElement?.removeChild(node);
+  });
+}
+
+/** Run after Radix close animations / state updates finish. */
+export function scheduleReleaseStaleScrollLock() {
+  if (typeof window === "undefined") return;
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => releaseStaleScrollLock());
+  });
 }
